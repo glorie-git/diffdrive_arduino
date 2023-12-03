@@ -1,95 +1,73 @@
-cmake_minimum_required(VERSION 3.5)
-project(diffdrive_arduino)
-
-# Default to C++14
-if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 14)
-endif()
-
+cmake_minimum_required(VERSION 3.8)
+project(led_serial)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra)
+  add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+# find dependencies
+set(THIS_PACKAGE_INCLUDE_DEPENDS
+  std_msgs
+  rclcpp
+  geometry_msgs
+)
+
+# find dependencies
+# find_package(ament_cmake REQUIRED)
+# find_package(rclcpp REQUIRED)
+# find_package(std_msgs REQUIRED)
+# find_package(serial REQUIRED)
+
+# find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(serial REQUIRED)
-find_package(hardware_interface REQUIRED)
-find_package(controller_manager REQUIRED)
-find_package(rclcpp REQUIRED)
-find_package(pluginlib REQUIRED)
+foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
+  find_package(${Dependency} REQUIRED)
+endforeach()
 
+# Define your ROS 2 executable
+add_executable(led_serial_node src/led_serial.cpp)
 
+# Specify the dependencies of the executable
+ament_target_dependencies(led_serial_node rclcpp std_msgs geometry_msgs)
 
-
-
-
-add_library(diffdrive_arduino SHARED src/diffdrive_arduino.cpp src/wheel.cpp src/arduino_comms.cpp)
-
-target_include_directories(
-  diffdrive_arduino
-  PRIVATE
-  include
-)
-ament_target_dependencies(
-  diffdrive_arduino
-  hardware_interface
-  controller_manager
-  serial
-  rclcpp
-  pluginlib
+install(TARGETS led_serial_node
+    ARCHIVE DESTINATION lib/${PROJECT_NAME}
+    LIBRARY DESTINATION lib/${PROJECT_NAME}
+    RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 
-pluginlib_export_plugin_description_file(hardware_interface robot_hardware.xml)
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  # the following line skips the linter which checks for copyrights
+  # comment the line when a copyright and license is added to all source files
+  set(ament_cmake_copyright_FOUND TRUE)
+  # the following line skips cpplint (only works in a git repo)
+  # comment the line when this package is in a git repo and when
+  # a copyright and license is added to all source files
+  set(ament_cmake_cpplint_FOUND TRUE)
+  ament_lint_auto_find_test_dependencies()
+endif()
 
+# target_link_libraries(led_serial_node PUBLIC serial)
+# Link with the LibSerial library
+target_link_libraries(led_serial_node /usr/lib/x86_64-linux-gnu/libserial.so)
 
-
-add_library(fake_robot SHARED src/fake_robot.cpp src/wheel.cpp)
-set_property(TARGET fake_robot PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-target_include_directories(
-  fake_robot
-  PRIVATE
-  include
-)
-ament_target_dependencies(
-  fake_robot
-  hardware_interface
-  controller_manager
-  rclcpp
-  pluginlib
-)
-
-pluginlib_export_plugin_description_file(hardware_interface fake_robot_hardware.xml)
-
-
-
-
-install(
-  TARGETS diffdrive_arduino fake_robot
-  DESTINATION lib
+# Specify where the header files are located
+install( DIRECTORY include/${PROJECT_NAME}
+  DESTINATION include/${PROJECT_NAME}
 )
 
+target_include_directories(led_serial_node 
+  PRIVATE include)
 
-
-
-install(
-  DIRECTORY controllers launch/
-  DESTINATION share/${PROJECT_NAME}
+# Install the executable
+install(TARGETS led_serial_node
+  DESTINATION lib/${PROJECT_NAME}
 )
 
-
-ament_export_libraries(
-  diffdrive_arduino
-  fake_robot
-)
-ament_export_dependencies(
-  hardware_interface
-  controller_manager
-  serial
-  rclcpp
-  pluginlib
+include_directories(
+  /usr/include/libserial
 )
 
+ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})
 ament_package()
-
-
